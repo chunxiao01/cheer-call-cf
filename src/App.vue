@@ -16,16 +16,35 @@
           class="particle-canvas"
         ></canvas>
         <div class="marquee-wrapper" :class="{ 'is-static': config.scrollDir === 'static' }">
-          <div ref="fullRibbonRef" class="marquee-ribbon">
-            <span
-              v-for="n in 6" :key="n"
-              class="stage-glyph"
-              :class="[
-                { 'pixel-mode': config.fontEffect === 'pixel' },
-                config.animateEffect ? 'animate__animated animate__infinite animate__' + config.animateEffect : ''
-              ]"
-              :style="textStyle"
-            >{{ config.text }}</span>
+          <div
+            ref="fullRibbonRef"
+            class="marquee-ribbon"
+            :class="{
+              'ribbon-horizontal': !isVerticalScroll,
+              'ribbon-vertical': isVerticalScroll
+            }"
+          >
+            <template v-if="config.scrollDir === 'static'">
+              <span
+                class="stage-glyph"
+                :class="[
+                  { 'pixel-mode': config.fontEffect === 'pixel' },
+                  config.animateEffect ? 'animate__animated animate__infinite animate__' + config.animateEffect : ''
+                ]"
+                :style="textStyle"
+              >{{ config.text }}</span>
+            </template>
+            <template v-else>
+              <span
+                v-for="n in 6" :key="n"
+                class="stage-glyph"
+                :class="[
+                  { 'pixel-mode': config.fontEffect === 'pixel' },
+                  config.animateEffect ? 'animate__animated animate__infinite animate__' + config.animateEffect : ''
+                ]"
+                :style="textStyle"
+              >{{ config.text }}</span>
+            </template>
           </div>
         </div>
       </div>
@@ -37,16 +56,35 @@
           <div class="phone-frame">
             <div class="frame-screen" :style="stageStyle">
               <div class="mini-marquee" :class="{ 'is-static': config.scrollDir === 'static' }">
-                <div ref="prevRibbonRef" class="mini-ribbon">
-                  <span
-                    v-for="n in 4" :key="n"
-                    class="preview-glyph"
-                    :class="[
-                      { 'pixel-mode': config.fontEffect === 'pixel' },
-                      config.animateEffect ? 'animate__animated animate__infinite animate__' + config.animateEffect : ''
-                    ]"
-                    :style="textStyle"
-                  >{{ config.text }}</span>
+                <div
+                  ref="prevRibbonRef"
+                  class="mini-ribbon"
+                  :class="{
+                    'ribbon-horizontal': !isVerticalScroll,
+                    'ribbon-vertical': isVerticalScroll
+                  }"
+                >
+                  <template v-if="config.scrollDir === 'static'">
+                    <span
+                      class="preview-glyph"
+                      :class="[
+                        { 'pixel-mode': config.fontEffect === 'pixel' },
+                        config.animateEffect ? 'animate__animated animate__infinite animate__' + config.animateEffect : ''
+                      ]"
+                      :style="textStyle"
+                    >{{ config.text }}</span>
+                  </template>
+                  <template v-else>
+                    <span
+                      v-for="n in 4" :key="n"
+                      class="preview-glyph"
+                      :class="[
+                        { 'pixel-mode': config.fontEffect === 'pixel' },
+                        config.animateEffect ? 'animate__animated animate__infinite animate__' + config.animateEffect : ''
+                      ]"
+                      :style="textStyle"
+                    >{{ config.text }}</span>
+                  </template>
                 </div>
               </div>
             </div>
@@ -174,24 +212,14 @@
           <div class="card glass-card">
             <span class="label">形变特效</span>
             <div class="fx-grid wide">
-              <button
-                v-for="fx in animateFx" :key="fx.val"
-                class="fx-btn"
-                :class="{ active: config.animateEffect === fx.val }"
-                @click="config.animateEffect = fx.val"
-              >{{ fx.label }}</button>
+              <button v-for="fx in animateFx" :key="fx.val" class="fx-btn" :class="{ active: config.animateEffect === fx.val }" @click="config.animateEffect = fx.val">{{ fx.label }}</button>
             </div>
           </div>
 
           <div class="card glass-card">
             <span class="label">光影律动</span>
             <div class="fx-grid wide">
-              <button
-                v-for="fx in gsapFx" :key="fx.val"
-                class="fx-btn glow-fx"
-                :class="{ active: config.gsapEffect === fx.val }"
-                @click="config.gsapEffect = fx.val"
-              >{{ fx.label }}</button>
+              <button v-for="fx in gsapFx" :key="fx.val" class="fx-btn glow-fx" :class="{ active: config.gsapEffect === fx.val }" @click="config.gsapEffect = fx.val">{{ fx.label }}</button>
             </div>
           </div>
 
@@ -206,7 +234,7 @@
             </div>
             <div class="mt-16">
               <div class="slider-row"><span class="label">滚动速度</span><span class="val">{{ config.speed }}</span></div>
-              <div class="ruler-slider"><input type="range" v-model.number="config.speed" min="1" max="1000" @input="updateSliderVar" /><div class="ticks"></div></div>
+              <div class="ruler-slider"><input type="range" v-model.number="config.speed" min="1" max="360" @input="updateSliderVar" /><div class="ticks"></div></div>
             </div>
           </div>
 
@@ -347,6 +375,10 @@ const gsapFx = [
   { label: '渐强呼吸', val: 'crescendo' }, { label: '漂浮+旋转', val: 'floatSpin' }
 ];
 
+const isVerticalScroll = computed(() => {
+  return config.scrollDir === 'ttb' || config.scrollDir === 'btt';
+});
+
 const previewFontSize = computed(() => Math.round(config.fontSize * 0.3));
 
 const hexToRgb = (hex) => {
@@ -401,30 +433,46 @@ const stageStyle = computed(() => {
   return { background: bg };
 });
 
+// 核心滚动动画 - 无抖动无卡顿，方向正确
 const runMarquee = (el) => {
   if (!el || config.scrollDir === 'static') return null;
   const children = el.children;
   if (!children || children.length === 0) return null;
-  const singleWidth = children[0].offsetWidth;
-  if (singleWidth === 0) return null;
-  const duration = Math.max(0.5, singleWidth / config.speed);
-  const axis = (config.scrollDir === 'rtl' || config.scrollDir === 'ltr') ? 'x' : 'y';
-  const reverse = (config.scrollDir === 'rtl' || config.scrollDir === 'ttb');
-  const start = reverse ? 0 : -singleWidth;
-  const end = reverse ? -singleWidth : 0;
-  gsap.set(el, { [axis]: start });
-  return gsap.to(el, {
-    [axis]: end,
-    duration,
+  const singleSize = isVerticalScroll.value
+    ? children[0].getBoundingClientRect().height
+    : children[0].getBoundingClientRect().width;
+  if (singleSize === 0) return null;
+  const duration = Math.max(0.5, singleSize / config.speed);
+  const axis = isVerticalScroll.value ? 'y' : 'x';
+  // 方向判定：
+  // rtl (←): x 减少 (负方向)   ltr (→): x 增加 (正方向)
+  // ttb (↓): y 增加 (正方向)   btt (↑): y 减少 (负方向)
+  const direction = (config.scrollDir === 'rtl' || config.scrollDir === 'btt') ? -1 : 1;
+
+  gsap.set(el, { x: 0, y: 0 });
+
+  // 使用无限 duration 的单次动画，通过 onUpdate 手动循环
+  const tween = gsap.to(el, {
+    [axis]: () => direction * singleSize,
+    duration: duration,
     ease: 'none',
-    repeat: -1
+    repeat: -1,
+    onRepeat: function() {
+      gsap.set(el, { [axis]: 0 });
+    }
   });
+  return tween;
 };
 
 const updateMarquee = () => {
   nextTick(() => {
     if (fullTween) { fullTween.kill(); fullTween = null; }
     if (prevTween) { prevTween.kill(); prevTween = null; }
+    if (config.scrollDir === 'static') {
+      gsap.set(fullRibbonRef.value, { x: 0, y: 0 });
+      gsap.set(prevRibbonRef.value, { x: 0, y: 0 });
+      return;
+    }
     if (isPlaying.value && fullRibbonRef.value) {
       fullTween = runMarquee(fullRibbonRef.value);
     } else if (!isPlaying.value && prevRibbonRef.value) {
@@ -434,6 +482,15 @@ const updateMarquee = () => {
 };
 
 watch(() => [config.text, config.fontSize, config.font, config.scrollDir, config.speed, isPlaying.value], updateMarquee, { flush: 'post' });
+
+watch(() => config.scrollDir, (newVal) => {
+  if (newVal === 'static') {
+    nextTick(() => {
+      if (fullRibbonRef.value) gsap.set(fullRibbonRef.value, { x: 0, y: 0 });
+      if (prevRibbonRef.value) gsap.set(prevRibbonRef.value, { x: 0, y: 0 });
+    });
+  }
+});
 
 const applyEffectsToElements = (containerRef, className) => {
   if (!containerRef.value) return;
@@ -534,21 +591,14 @@ const startPixelText = () => {
     for (let x = 0; x < textWidth; x += step) {
       const index = (y * textWidth + x) * 4;
       if (imageData[index + 3] > 128) {
-        particles.push({
-          x: x + startX,
-          y: y + startY,
-          originX: x + startX,
-          originY: y + startY
-        });
+        particles.push({ x: x + startX, y: y + startY, originX: x + startX, originY: y + startY });
       }
     }
   }
   const draw = () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = config.textColor;
-    for (const p of particles) {
-      ctx.fillRect(Math.round(p.x), Math.round(p.y), step, step);
-    }
+    for (const p of particles) ctx.fillRect(Math.round(p.x), Math.round(p.y), step, step);
   };
   draw();
 };
@@ -583,14 +633,7 @@ const startParticleText = () => {
     for (let x = 0; x < textWidth; x += step) {
       const index = (y * textWidth + x) * 4;
       if (imageData[index + 3] > 128) {
-        particles.push({
-          x: x + startX,
-          y: y + startY,
-          originX: x + startX,
-          originY: y + startY,
-          vx: 0,
-          vy: 0
-        });
+        particles.push({ x: x + startX, y: y + startY, originX: x + startX, originY: y + startY, vx: 0, vy: 0 });
       }
     }
   }
@@ -741,496 +784,78 @@ onUnmounted(() => {
   --r-md: 14px;
   --r-sm: 10px;
 }
-.app-root {
-  width: 100%;
-  height: 100vh;
-  overflow: hidden;
-  background: var(--bg);
-  color: var(--t1);
-  font-family: system-ui, -apple-system, sans-serif;
-  position: relative;
-}
-.fullscreen-stage {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  cursor: pointer;
-}
-.particle-canvas {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-}
-.marquee-wrapper {
-  width: 100%;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  position: relative;
-  z-index: 1;
-}
-.marquee-wrapper.is-static {
-  justify-content: center;
-}
-.marquee-ribbon {
-  display: inline-flex;
-  gap: 0;
-  will-change: transform;
-  white-space: nowrap;
-  align-items: center;
-}
-.stage-glyph {
-  font-weight: 900;
-  line-height: 1.2;
-  user-select: none;
-  -webkit-user-select: none;
-  padding: 0 10vw;
-}
-.pixel-mode {
-  text-shadow: none !important;
-}
-.editor-layout {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  background: linear-gradient(180deg, #0a0a0a 0%, #000 100%);
-}
-.preview-theater {
-  height: 22vh;
-  min-height: 140px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 12px;
-  border-bottom: 1px solid var(--card-border);
-  flex-shrink: 0;
-}
-.phone-frame {
-  width: 100%;
-  max-width: 320px;
-  height: 100%;
-  border-radius: var(--r-lg);
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  overflow: hidden;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
-  background: #000;
-  position: relative;
-}
-.frame-screen {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-.mini-marquee {
-  width: 100%;
-  overflow: hidden;
-  white-space: nowrap;
-}
-.mini-marquee.is-static {
-  display: flex;
-  justify-content: center;
-}
-.mini-ribbon {
-  display: inline-flex;
-  gap: 0;
-  will-change: transform;
-  white-space: nowrap;
-  align-items: center;
-}
-.preview-glyph {
-  font-weight: 900;
-  line-height: 1.2;
-  padding: 0 5vw;
-}
-.config-area {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px 16px 140px;
-}
-.glass-card {
-  background: var(--card-bg);
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
-  border: 1px solid var(--card-border);
-  border-radius: var(--r-lg);
-  padding: 18px;
-  margin-bottom: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  box-shadow: var(--card-shadow);
-}
-.row-card {
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-}
-.label {
-  font-size: 12px;
-  color: var(--t2);
-  font-weight: 600;
-  letter-spacing: 0.05em;
-}
-.sub-label {
-  font-size: 11px;
-  color: var(--t2);
-  margin-bottom: 6px;
-  display: block;
-}
-.mt-4 { margin-top: 4px; }
-.mt-8 { margin-top: 8px; }
-.mt-12 { margin-top: 12px; }
-.mt-16 { margin-top: 16px; }
-.input-row {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-.neo-input {
-  width: 100%;
-  padding: 14px 16px;
-  border-radius: var(--r-md);
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid var(--card-border);
-  color: #fff;
-  font-size: 16px;
-  outline: none;
-  box-sizing: border-box;
-  transition: all 0.2s;
-}
-.neo-input.sm {
-  padding: 10px 14px;
-  font-size: 14px;
-}
-.neo-input:focus {
-  border-color: var(--primary);
-  background: rgba(0, 0, 0, 0.5);
-}
-.clear-inline {
-  position: absolute;
-  right: 12px;
-  background: none;
-  border: none;
-  color: var(--t2);
-  font-size: 14px;
-  cursor: pointer;
-  padding: 4px;
-}
-.pill-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.pill-group.mini {
-  gap: 6px;
-}
-.pill {
-  padding: 10px 16px;
-  border-radius: 10px;
-  border: 1px solid var(--card-border);
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--t2);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.pill.sm {
-  padding: 8px 12px;
-  font-size: 12px;
-}
-.pill.active {
-  background: #fff;
-  color: #000;
-  border-color: #fff;
-  box-shadow: 0 2px 10px rgba(255, 255, 255, 0.2);
-}
-.dir-pills {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
-.pill.dir {
-  text-align: center;
-}
-.mirror-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-.pill.mirror {
-  text-align: center;
-}
-.color-swatch-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  justify-content: flex-start;
-}
-.color-swatch-grid.small {
-  gap: 6px;
-}
-.swatch-item {
-  width: 42px;
-  height: 42px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid transparent;
-  cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-  font-size: 15px;
-  font-weight: 900;
-  position: relative;
-}
-.swatch-item.sm {
-  width: 32px;
-  height: 32px;
-  font-size: 0;
-}
-.swatch-item.active {
-  transform: scale(1.1);
-  border-color: #fff !important;
-}
-.swatch-text {
-  pointer-events: none;
-}
-.color-swatch-sm {
-  display: inline-block;
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  border: 2px solid var(--card-border);
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-  box-sizing: border-box;
-}
-.hidden-color-input {
-  position: absolute;
-  top: -10px;
-  left: -10px;
-  width: calc(100% + 20px);
-  height: calc(100% + 20px);
-  opacity: 0;
-  cursor: pointer;
-}
-.font-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
-.font-btn {
-  padding: 12px;
-  border-radius: 10px;
-  border: 1px solid var(--card-border);
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--t2);
-  font-size: 12px;
-  cursor: pointer;
-}
-.font-btn.active {
-  background: #fff;
-  color: #000;
-  border-color: #fff;
-}
-.slider-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.val {
-  font-size: 13px;
-  color: var(--primary);
-  font-weight: 700;
-}
-.ruler-slider {
-  position: relative;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  margin-top: 4px;
-}
-.ruler-slider input[type="range"] {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  cursor: pointer;
-  z-index: 10;
-  margin: 0;
-  top: 0;
-  left: 0;
-}
-.ticks {
-  position: absolute;
-  width: 100%;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 2px;
-  pointer-events: none;
-}
-.ruler-slider::before {
-  content: '';
-  position: absolute;
-  height: 18px;
-  width: 18px;
-  background: #fff;
-  border-radius: 50%;
-  z-index: 5;
-  pointer-events: none;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
-  left: calc(var(--val, 50) * 1%);
-  transform: translateX(-50%);
-}
-.fx-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
-}
-.fx-btn {
-  padding: 8px 4px;
-  border-radius: 10px;
-  border: 1px solid var(--card-border);
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--t2);
-  font-size: 10px;
-  cursor: pointer;
-  text-align: center;
-  line-height: 1.3;
-  transition: all 0.2s;
-}
-.fx-btn.active {
-  background: #fff;
-  color: #000;
-  border-color: #fff;
-}
-.fx-btn.glow-fx.active {
-  background: linear-gradient(135deg, #fff, #e0e0e0);
-  box-shadow: 0 2px 12px rgba(255, 255, 255, 0.3);
-}
-.history-card {
-  background: rgba(40, 40, 48, 0.8);
-}
-.history-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-height: 200px;
-  overflow-y: auto;
-}
-.history-item {
-  padding: 12px 14px;
-  border-radius: var(--r-md);
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--card-border);
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.history-item:active {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: #fff;
-}
-.h-name {
-  font-size: 12px;
-  color: var(--primary);
-  font-weight: 600;
-}
-.h-preview {
-  font-size: 13px;
-  color: var(--t1);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.history-empty {
-  padding: 20px;
-  text-align: center;
-  color: var(--t2);
-  font-size: 12px;
-  border: 1px dashed var(--card-border);
-  border-radius: var(--r-md);
-}
-.bottom-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 16px 20px calc(16px + env(safe-area-inset-bottom));
-  background: rgba(10, 10, 10, 0.9);
-  backdrop-filter: blur(24px);
-  border-top: 1px solid var(--card-border);
-  display: flex;
-  gap: 12px;
-  z-index: 10000;
-  pointer-events: auto;
-}
-.action-btn {
-  flex: 1;
-  padding: 16px;
-  border-radius: var(--r-lg);
-  border: none;
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: transform 0.1s;
-  letter-spacing: 0.02em;
-}
-.action-btn:active {
-  transform: scale(0.96);
-}
-.action-btn.secondary {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--t1);
-  border: 1px solid var(--card-border);
-  backdrop-filter: blur(10px);
-}
-.action-btn.primary {
-  background: linear-gradient(135deg, #F0EEE9, #E8D6D0);
-  color: #3A2825;
-  border: 0;
-  border-radius: 9999px;
-  padding: 14px 36px;
-  font-size: 16px;
-  font-weight: 500;
-  box-shadow: 0 3px 12px rgba(228, 208, 202, 0.3);
-  transition: all 0.2s ease;
-}
-.action-btn.primary:active {
-  transform: scale(0.96);
-  opacity: 0.9;
-}
-.fade-stage-enter-active,
-.fade-stage-leave-active {
-  transition: opacity 0.3s;
-}
-.fade-stage-enter-from,
-.fade-stage-leave-to {
-  opacity: 0;
-}
-.slide-editor-enter-active,
-.slide-editor-leave-active {
-  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.slide-editor-enter-from,
-.slide-editor-leave-to {
-  transform: translateY(100%);
-}
-.spacer {
-  height: 20px;
-}
+.app-root { width: 100%; height: 100vh; overflow: hidden; background: var(--bg); color: var(--t1); font-family: system-ui, -apple-system, sans-serif; position: relative; }
+.fullscreen-stage { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; }
+.particle-canvas { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.marquee-wrapper { width: 100%; height: 100%; overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative; z-index: 1; }
+.marquee-wrapper.is-static { justify-content: center; align-items: center; }
+.marquee-ribbon { display: inline-flex; gap: 0; will-change: transform; white-space: nowrap; align-items: center; backface-visibility: hidden; }
+.ribbon-horizontal { flex-direction: row; }
+.ribbon-vertical { flex-direction: column; white-space: normal; align-items: center; }
+.stage-glyph { font-weight: 900; line-height: 1.2; user-select: none; -webkit-user-select: none; padding: 0 10vw; text-align: center; }
+.pixel-mode { text-shadow: none !important; }
+.editor-layout { width: 100%; height: 100%; display: flex; flex-direction: column; background: linear-gradient(180deg, #0a0a0a 0%, #000 100%); }
+.preview-theater { height: 22vh; min-height: 140px; display: flex; justify-content: center; align-items: center; padding: 12px; border-bottom: 1px solid var(--card-border); flex-shrink: 0; }
+.phone-frame { width: 100%; max-width: 320px; height: 100%; border-radius: var(--r-lg); border: 2px solid rgba(255, 255, 255, 0.1); overflow: hidden; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6); background: #000; position: relative; }
+.frame-screen { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.mini-marquee { width: 100%; height: 100%; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+.mini-marquee.is-static { justify-content: center; align-items: center; }
+.mini-ribbon { display: inline-flex; gap: 0; will-change: transform; white-space: nowrap; align-items: center; backface-visibility: hidden; }
+.mini-ribbon.ribbon-vertical { flex-direction: column; align-items: center; width: 100%; }
+.preview-glyph { font-weight: 900; line-height: 1.2; padding: 0 5vw; text-align: center; width: 100%; display: inline-block; }
+.config-area { flex: 1; overflow-y: auto; padding: 16px 16px 140px; }
+.glass-card { background: var(--card-bg); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); border: 1px solid var(--card-border); border-radius: var(--r-lg); padding: 18px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 14px; box-shadow: var(--card-shadow); }
+.row-card { flex-direction: row; justify-content: space-between; align-items: center; }
+.label { font-size: 12px; color: var(--t2); font-weight: 600; letter-spacing: 0.05em; }
+.sub-label { font-size: 11px; color: var(--t2); margin-bottom: 6px; display: block; }
+.mt-4 { margin-top: 4px; } .mt-8 { margin-top: 8px; } .mt-12 { margin-top: 12px; } .mt-16 { margin-top: 16px; }
+.input-row { position: relative; display: flex; align-items: center; }
+.neo-input { width: 100%; padding: 14px 16px; border-radius: var(--r-md); background: rgba(0, 0, 0, 0.3); border: 1px solid var(--card-border); color: #fff; font-size: 16px; outline: none; box-sizing: border-box; transition: all 0.2s; }
+.neo-input.sm { padding: 10px 14px; font-size: 14px; }
+.neo-input:focus { border-color: var(--primary); background: rgba(0, 0, 0, 0.5); }
+.clear-inline { position: absolute; right: 12px; background: none; border: none; color: var(--t2); font-size: 14px; cursor: pointer; padding: 4px; }
+.pill-group { display: flex; flex-wrap: wrap; gap: 8px; } .pill-group.mini { gap: 6px; }
+.pill { padding: 10px 16px; border-radius: 10px; border: 1px solid var(--card-border); background: rgba(255, 255, 255, 0.03); color: var(--t2); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+.pill.sm { padding: 8px 12px; font-size: 12px; }
+.pill.active { background: #fff; color: #000; border-color: #fff; box-shadow: 0 2px 10px rgba(255, 255, 255, 0.2); }
+.dir-pills { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; } .pill.dir { text-align: center; }
+.mirror-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; } .pill.mirror { text-align: center; }
+.color-swatch-grid { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-start; } .color-swatch-grid.small { gap: 6px; }
+.swatch-item { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; border: 2px solid transparent; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3); font-size: 15px; font-weight: 900; position: relative; }
+.swatch-item.sm { width: 32px; height: 32px; font-size: 0; }
+.swatch-item.active { transform: scale(1.1); border-color: #fff !important; }
+.swatch-text { pointer-events: none; }
+.color-swatch-sm { display: inline-block; width: 36px; height: 36px; border-radius: 8px; border: 2px solid var(--card-border); cursor: pointer; position: relative; overflow: hidden; box-sizing: border-box; }
+.hidden-color-input { position: absolute; top: -10px; left: -10px; width: calc(100% + 20px); height: calc(100% + 20px); opacity: 0; cursor: pointer; }
+.font-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.font-btn { padding: 12px; border-radius: 10px; border: 1px solid var(--card-border); background: rgba(255, 255, 255, 0.03); color: var(--t2); font-size: 12px; cursor: pointer; }
+.font-btn.active { background: #fff; color: #000; border-color: #fff; }
+.slider-row { display: flex; justify-content: space-between; align-items: center; }
+.val { font-size: 13px; color: var(--primary); font-weight: 700; }
+.ruler-slider { position: relative; height: 30px; display: flex; align-items: center; margin-top: 4px; }
+.ruler-slider input[type="range"] { position: absolute; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 10; margin: 0; top: 0; left: 0; }
+.ticks { position: absolute; width: 100%; height: 4px; background: rgba(255, 255, 255, 0.08); border-radius: 2px; pointer-events: none; }
+.ruler-slider::before { content: ''; position: absolute; height: 18px; width: 18px; background: #fff; border-radius: 50%; z-index: 5; pointer-events: none; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5); left: calc(var(--val, 50) * 1%); transform: translateX(-50%); }
+.fx-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.fx-btn { padding: 8px 4px; border-radius: 10px; border: 1px solid var(--card-border); background: rgba(255, 255, 255, 0.03); color: var(--t2); font-size: 10px; cursor: pointer; text-align: center; line-height: 1.3; transition: all 0.2s; }
+.fx-btn.active { background: #fff; color: #000; border-color: #fff; }
+.fx-btn.glow-fx.active { background: linear-gradient(135deg, #fff, #e0e0e0); box-shadow: 0 2px 12px rgba(255, 255, 255, 0.3); }
+.history-card { background: rgba(40, 40, 48, 0.8); }
+.history-list { display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto; }
+.history-item { padding: 12px 14px; border-radius: var(--r-md); background: rgba(255, 255, 255, 0.03); border: 1px solid var(--card-border); cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; gap: 4px; }
+.history-item:active { background: rgba(255, 255, 255, 0.1); border-color: #fff; }
+.h-name { font-size: 12px; color: var(--primary); font-weight: 600; }
+.h-preview { font-size: 13px; color: var(--t1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-empty { padding: 20px; text-align: center; color: var(--t2); font-size: 12px; border: 1px dashed var(--card-border); border-radius: var(--r-md); }
+.bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; padding: 16px 20px calc(16px + env(safe-area-inset-bottom)); background: rgba(10, 10, 10, 0.9); backdrop-filter: blur(24px); border-top: 1px solid var(--card-border); display: flex; gap: 12px; z-index: 10000; pointer-events: auto; }
+.action-btn { flex: 1; padding: 16px; border-radius: var(--r-lg); border: none; font-size: 15px; font-weight: 700; cursor: pointer; transition: transform 0.1s; letter-spacing: 0.02em; }
+.action-btn:active { transform: scale(0.96); }
+.action-btn.secondary { background: rgba(255, 255, 255, 0.1); color: var(--t1); border: 1px solid var(--card-border); backdrop-filter: blur(10px); }
+.action-btn.primary { background: linear-gradient(135deg, #F0EEE9, #E8D6D0); color: #3A2825; border: 0; border-radius: 9999px; padding: 14px 36px; font-size: 16px; font-weight: 500; box-shadow: 0 3px 12px rgba(228, 208, 202, 0.3); transition: all 0.2s ease; }
+.action-btn.primary:active { transform: scale(0.96); opacity: 0.9; }
+.fade-stage-enter-active, .fade-stage-leave-active { transition: opacity 0.3s; }
+.fade-stage-enter-from, .fade-stage-leave-to { opacity: 0; }
+.slide-editor-enter-active, .slide-editor-leave-active { transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.slide-editor-enter-from, .slide-editor-leave-to { transform: translateY(100%); }
+.spacer { height: 20px; }
 </style>

@@ -433,35 +433,34 @@ const stageStyle = computed(() => {
   return { background: bg };
 });
 
-// 核心滚动动画 - 无抖动无卡顿，方向正确
 const runMarquee = (el) => {
   if (!el || config.scrollDir === 'static') return null;
   const children = el.children;
   if (!children || children.length === 0) return null;
+  // 使用固定布局尺寸，不依赖 viewport 单位
   const singleSize = isVerticalScroll.value
-    ? children[0].getBoundingClientRect().height
-    : children[0].getBoundingClientRect().width;
+    ? children[0].offsetHeight
+    : children[0].offsetWidth;
   if (singleSize === 0) return null;
   const duration = Math.max(0.5, singleSize / config.speed);
   const axis = isVerticalScroll.value ? 'y' : 'x';
-  // 方向判定：
-  // rtl (←): x 减少 (负方向)   ltr (→): x 增加 (正方向)
-  // ttb (↓): y 增加 (正方向)   btt (↑): y 减少 (负方向)
-  const direction = (config.scrollDir === 'rtl' || config.scrollDir === 'btt') ? -1 : 1;
+  const reverse = (config.scrollDir === 'rtl' || config.scrollDir === 'ttb');
+  const move = reverse ? -singleSize : singleSize;
 
-  gsap.set(el, { x: 0, y: 0 });
-
-  // 使用无限 duration 的单次动画，通过 onUpdate 手动循环
-  const tween = gsap.to(el, {
-    [axis]: () => direction * singleSize,
-    duration: duration,
+  gsap.set(el, { x: 0, y: 0, force3D: true });
+  return gsap.to(el, {
+    [axis]: `+=${move}`,
+    duration,
     ease: 'none',
     repeat: -1,
-    onRepeat: function() {
-      gsap.set(el, { [axis]: 0 });
+    force3D: true,
+    modifiers: {
+      [axis]: gsap.utils.unitize((val) => {
+        const mod = singleSize;
+        return parseFloat(val) % mod;
+      })
     }
   });
-  return tween;
 };
 
 const updateMarquee = () => {
@@ -759,6 +758,7 @@ onMounted(() => {
   document.addEventListener('fullscreenchange', handleFullscreenChange);
   window.addEventListener('popstate', handlePopState);
   document.addEventListener('visibilitychange', handleVisibilityChange);
+  window.addEventListener('resize', updateMarquee);
 });
 
 onUnmounted(() => {
@@ -766,6 +766,7 @@ onUnmounted(() => {
   document.removeEventListener('fullscreenchange', handleFullscreenChange);
   window.removeEventListener('popstate', handlePopState);
   document.removeEventListener('visibilitychange', handleVisibilityChange);
+  window.removeEventListener('resize', updateMarquee);
   clearTimeout(longPressTimer);
 });
 </script>
@@ -792,7 +793,7 @@ onUnmounted(() => {
 .marquee-ribbon { display: inline-flex; gap: 0; will-change: transform; white-space: nowrap; align-items: center; backface-visibility: hidden; }
 .ribbon-horizontal { flex-direction: row; }
 .ribbon-vertical { flex-direction: column; white-space: normal; align-items: center; }
-.stage-glyph { font-weight: 900; line-height: 1.2; user-select: none; -webkit-user-select: none; padding: 0 10vw; text-align: center; }
+.stage-glyph { font-weight: 900; line-height: 1.2; user-select: none; -webkit-user-select: none; padding: 0 3rem; text-align: center; }
 .pixel-mode { text-shadow: none !important; }
 .editor-layout { width: 100%; height: 100%; display: flex; flex-direction: column; background: linear-gradient(180deg, #0a0a0a 0%, #000 100%); }
 .preview-theater { height: 22vh; min-height: 140px; display: flex; justify-content: center; align-items: center; padding: 12px; border-bottom: 1px solid var(--card-border); flex-shrink: 0; }

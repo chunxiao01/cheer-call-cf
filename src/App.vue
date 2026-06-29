@@ -1,18 +1,5 @@
 <template>
   <div class="app-root">
-    <svg style="position:absolute;width:0;height:0;pointer-events:none;">
-      <filter id="pixel-disrupt">
-        <feTurbulence type="fractalNoise" baseFrequency="0.12" numOctaves="2" result="noise" />
-        <feDisplacementMap in="SourceGraphic" in2="noise" scale="2" xChannelSelector="R" yChannelSelector="G" />
-      </filter>
-      <filter id="pixel-grid">
-        <feMorphology operator="dilate" radius="0.5" />
-        <feComponentTransfer>
-          <feFuncA type="discrete" tableValues="0 1" />
-        </feComponentTransfer>
-      </filter>
-    </svg>
-
     <Transition name="fade-stage">
       <div
         v-if="isPlaying"
@@ -23,18 +10,20 @@
         @touchend="onTouchEnd"
         @touchmove="onTouchMove"
       >
-        <canvas v-if="config.fontEffect === 'particle'" ref="particleCanvasRef" class="particle-canvas"></canvas>
+        <canvas
+          v-if="config.fontEffect === 'pixel' || config.fontEffect === 'particle'"
+          ref="particleCanvasRef"
+          class="particle-canvas"
+        ></canvas>
         <div class="marquee-wrapper" :class="{ 'is-static': config.scrollDir === 'static' }">
           <div ref="fullRibbonRef" class="marquee-ribbon">
             <span
+              v-for="n in 6" :key="n"
               class="stage-glyph"
-              :class="{ 'pixel-mode': config.fontEffect === 'pixel' }"
-              :style="textStyle"
-            >{{ config.text }}</span>
-            <span
-              v-if="config.scrollDir !== 'static'"
-              class="stage-glyph"
-              :class="{ 'pixel-mode': config.fontEffect === 'pixel' }"
+              :class="[
+                { 'pixel-mode': config.fontEffect === 'pixel' },
+                config.animateEffect ? 'animate__animated animate__infinite animate__' + config.animateEffect : ''
+              ]"
               :style="textStyle"
             >{{ config.text }}</span>
           </div>
@@ -50,14 +39,12 @@
               <div class="mini-marquee" :class="{ 'is-static': config.scrollDir === 'static' }">
                 <div ref="prevRibbonRef" class="mini-ribbon">
                   <span
+                    v-for="n in 4" :key="n"
                     class="preview-glyph"
-                    :class="{ 'pixel-mode': config.fontEffect === 'pixel' }"
-                    :style="textStyle"
-                  >{{ config.text }}</span>
-                  <span
-                    v-if="config.scrollDir !== 'static'"
-                    class="preview-glyph"
-                    :class="{ 'pixel-mode': config.fontEffect === 'pixel' }"
+                    :class="[
+                      { 'pixel-mode': config.fontEffect === 'pixel' },
+                      config.animateEffect ? 'animate__animated animate__infinite animate__' + config.animateEffect : ''
+                    ]"
                     :style="textStyle"
                   >{{ config.text }}</span>
                 </div>
@@ -186,15 +173,25 @@
 
           <div class="card glass-card">
             <span class="label">形变特效</span>
-            <div class="fx-grid">
-              <button v-for="fx in animateFx" :key="fx.val" class="fx-btn" :class="{ active: config.animateEffect === fx.val }" @click="config.animateEffect = fx.val">{{ fx.label }}</button>
+            <div class="fx-grid wide">
+              <button
+                v-for="fx in animateFx" :key="fx.val"
+                class="fx-btn"
+                :class="{ active: config.animateEffect === fx.val }"
+                @click="config.animateEffect = fx.val"
+              >{{ fx.label }}</button>
             </div>
           </div>
 
           <div class="card glass-card">
             <span class="label">光影律动</span>
-            <div class="fx-grid">
-              <button v-for="fx in gsapFx" :key="fx.val" class="fx-btn glow-fx" :class="{ active: config.gsapEffect === fx.val }" @click="config.gsapEffect = fx.val">{{ fx.label }}</button>
+            <div class="fx-grid wide">
+              <button
+                v-for="fx in gsapFx" :key="fx.val"
+                class="fx-btn glow-fx"
+                :class="{ active: config.gsapEffect === fx.val }"
+                @click="config.gsapEffect = fx.val"
+              >{{ fx.label }}</button>
             </div>
           </div>
 
@@ -286,7 +283,7 @@ const config = reactive({
   fontSize: 140,
   mirror: 'none',
   textFillMode: 'solid',
-  textColor: '#ffffff',
+  textColor: '#b066ff',
   textGradStart: '#ff007f',
   textGradEnd: '#00f0ff',
   textGradAngle: 90,
@@ -312,19 +309,42 @@ const themes = [
 ];
 const bgPresets = ['#000000', '#1a1a1a', '#2d2d2d', '#0a0a0a', '#050505', '#1c1c1e', '#0f0c29', '#050a14', '#140505', '#05140a'];
 const animateFx = [
-  { label: '无', val: '' }, { label: '脉冲', val: 'animate__pulse' }, { label: '心跳', val: 'animate__heartBeat' },
-  { label: '弹跳', val: 'animate__bounce' }, { label: '闪烁', val: 'animate__flash' }, { label: '果冻', val: 'animate__jello' },
-  { label: '铃铛', val: 'animate__tada' }, { label: '摇摆', val: 'animate__swing' }, { label: '橡皮筋', val: 'animate__rubberBand' },
-  { label: '抖动X', val: 'animate__shakeX' }, { label: '抖动Y', val: 'animate__shakeY' }, { label: '摆动', val: 'animate__wobble' },
-  { label: '淡入', val: 'animate__fadeIn' }, { label: '淡入上', val: 'animate__fadeInUp' }, { label: '滑入上', val: 'animate__slideInUp' },
-  { label: '缩放入', val: 'animate__zoomIn' }, { label: '翻转X', val: 'animate__flipInX' }, { label: '旋转入', val: 'animate__rotateIn' }
+  { label: '无', val: '' },
+  { label: '弹跳', val: 'bounce' }, { label: '闪烁', val: 'flash' }, { label: '脉冲', val: 'pulse' },
+  { label: '橡皮筋', val: 'rubberBand' }, { label: '抖动X', val: 'shakeX' }, { label: '抖动Y', val: 'shakeY' },
+  { label: '摇头', val: 'headShake' }, { label: '摇摆', val: 'swing' }, { label: '铃铛', val: 'tada' },
+  { label: '晃动', val: 'wobble' }, { label: '果冻', val: 'jello' }, { label: '心跳', val: 'heartBeat' },
+  { label: '淡入', val: 'fadeIn' }, { label: '淡入下', val: 'fadeInDown' }, { label: '淡入左', val: 'fadeInLeft' },
+  { label: '淡入右', val: 'fadeInRight' }, { label: '淡入上', val: 'fadeInUp' }, { label: '淡出', val: 'fadeOut' },
+  { label: '淡出下', val: 'fadeOutDown' }, { label: '淡出左', val: 'fadeOutLeft' }, { label: '淡出右', val: 'fadeOutRight' },
+  { label: '淡出上', val: 'fadeOutUp' }, { label: '翻转', val: 'flip' }, { label: '翻转X', val: 'flipInX' },
+  { label: '翻转Y', val: 'flipInY' }, { label: '翻转出X', val: 'flipOutX' }, { label: '翻转出Y', val: 'flipOutY' },
+  { label: '光速入', val: 'lightSpeedInRight' }, { label: '光速出', val: 'lightSpeedOutRight' },
+  { label: '旋转入', val: 'rotateIn' }, { label: '旋转入下左', val: 'rotateInDownLeft' }, { label: '旋转入下右', val: 'rotateInDownRight' },
+  { label: '旋转入上左', val: 'rotateInUpLeft' }, { label: '旋转入上右', val: 'rotateInUpRight' }, { label: '旋转出', val: 'rotateOut' },
+  { label: '旋转出下左', val: 'rotateOutDownLeft' }, { label: '旋转出下右', val: 'rotateOutDownRight' },
+  { label: '旋转出上左', val: 'rotateOutUpLeft' }, { label: '旋转出上右', val: 'rotateOutUpRight' },
+  { label: '铰链', val: 'hinge' }, { label: '盒子入', val: 'jackInTheBox' }, { label: '滚入', val: 'rollIn' },
+  { label: '滚出', val: 'rollOut' }, { label: '缩放入', val: 'zoomIn' }, { label: '缩放入下', val: 'zoomInDown' },
+  { label: '缩放入左', val: 'zoomInLeft' }, { label: '缩放入右', val: 'zoomInRight' }, { label: '缩放入上', val: 'zoomInUp' },
+  { label: '缩放退', val: 'zoomOut' }, { label: '缩放退下', val: 'zoomOutDown' }, { label: '缩放退左', val: 'zoomOutLeft' },
+  { label: '缩放退右', val: 'zoomOutRight' }, { label: '缩放退上', val: 'zoomOutUp' }, { label: '滑入下', val: 'slideInDown' },
+  { label: '滑入左', val: 'slideInLeft' }, { label: '滑入右', val: 'slideInRight' }, { label: '滑入上', val: 'slideInUp' },
+  { label: '滑出下', val: 'slideOutDown' }, { label: '滑出左', val: 'slideOutLeft' }, { label: '滑出右', val: 'slideOutRight' },
+  { label: '滑出上', val: 'slideOutUp' }
 ];
 const gsapFx = [
-  { label: '无', val: '' }, { label: '霓虹呼吸', val: 'breathe' }, { label: '律动缩放', val: 'scale' }, { label: '赛博倾斜', val: 'tilt' },
-  { label: '色彩流转', val: 'hueShift' }, { label: '弹性震颤', val: 'elastic' }, { label: '慢速呼吸', val: 'slowBreathe' },
-  { label: '快速脉冲', val: 'fastPulse' }, { label: '深度缩放', val: 'deepScale' }, { label: '微颤', val: 'microShake' },
-  { label: '左右摆', val: 'sway' }, { label: '上下浮', val: 'float' }, { label: '频闪', val: 'strobe' },
-  { label: '弹簧', val: 'spring' }, { label: '心跳模拟', val: 'heartbeat' }, { label: '呼吸+色移', val: 'breatheHue' }
+  { label: '无', val: '' }, { label: '霓虹呼吸', val: 'breathe' }, { label: '律动缩放', val: 'scale' },
+  { label: '赛博倾斜', val: 'tilt' }, { label: '色彩流转', val: 'hueShift' }, { label: '弹性震颤', val: 'elastic' },
+  { label: '慢速呼吸', val: 'slowBreathe' }, { label: '快速脉冲', val: 'fastPulse' }, { label: '深度缩放', val: 'deepScale' },
+  { label: '微颤', val: 'microShake' }, { label: '左右摆', val: 'sway' }, { label: '上下浮', val: 'float' },
+  { label: '频闪', val: 'strobe' }, { label: '弹簧', val: 'spring' }, { label: '心跳模拟', val: 'heartbeat' },
+  { label: '呼吸+色移', val: 'breatheHue' }, { label: '弹性缩放', val: 'elasticScale' }, { label: '渐隐脉冲', val: 'fadePulse' },
+  { label: '扭曲呼吸', val: 'skewBreathe' }, { label: '随机微动', val: 'randomMicro' }, { label: '交错缩放', val: 'staggerScale' },
+  { label: '频闪呼吸', val: 'strobeBreathe' }, { label: '波浪缩放', val: 'waveScale' }, { label: '螺旋', val: 'spiral' },
+  { label: '缓入缩放', val: 'easeScale' }, { label: '抖动呼吸', val: 'jitterBreathe' }, { label: '渐进倾斜', val: 'gradualTilt' },
+  { label: '双脉冲', val: 'doublePulse' }, { label: '反向呼吸', val: 'reverseBreathe' }, { label: '旋转呼吸', val: 'spinBreathe' },
+  { label: '渐强呼吸', val: 'crescendo' }, { label: '漂浮+旋转', val: 'floatSpin' }
 ];
 
 const previewFontSize = computed(() => Math.round(config.fontSize * 0.3));
@@ -367,9 +387,8 @@ const textStyle = computed(() => {
     base.webkitTextFillColor = 'transparent';
     base.color = 'transparent';
   }
-  if (config.fontEffect === 'pixel') {
-    base.filter = 'url(#pixel-disrupt)';
-    base.fontSmooth = 'never';
+  if (config.fontEffect === 'pixel' || config.fontEffect === 'particle') {
+    base.opacity = '0';
   }
   return base;
 });
@@ -393,7 +412,13 @@ const runMarquee = (el) => {
   const reverse = (config.scrollDir === 'rtl' || config.scrollDir === 'ttb');
   const start = reverse ? 0 : -singleWidth;
   const end = reverse ? -singleWidth : 0;
-  return gsap.fromTo(el, { [axis]: start }, { [axis]: end, duration, ease: 'none', repeat: -1 });
+  gsap.set(el, { [axis]: start });
+  return gsap.to(el, {
+    [axis]: end,
+    duration,
+    ease: 'none',
+    repeat: -1
+  });
 };
 
 const updateMarquee = () => {
@@ -408,23 +433,17 @@ const updateMarquee = () => {
   });
 };
 
-watch(() => [config.text, config.fontSize, config.font, config.scrollDir, config.speed, isPlaying.value], updateMarquee);
+watch(() => [config.text, config.fontSize, config.font, config.scrollDir, config.speed, isPlaying.value], updateMarquee, { flush: 'post' });
 
 const applyEffectsToElements = (containerRef, className) => {
   if (!containerRef.value) return;
   const els = containerRef.value.querySelectorAll(className);
-  els.forEach(el => applySingleEffect(el, className));
+  els.forEach(el => applySingleEffect(el));
 };
 
-const applySingleEffect = (targetEl, baseClass) => {
+const applySingleEffect = (targetEl) => {
   if (!targetEl) return;
   gsap.killTweensOf(targetEl);
-  targetEl.className = baseClass.replace('.', '');
-  if (config.fontEffect === 'pixel') targetEl.classList.add('pixel-mode');
-
-  if (config.animateEffect && config.animateEffect.startsWith('animate__')) {
-    targetEl.classList.add(config.animateEffect, 'animate__infinite');
-  }
   if (config.gsapEffect) {
     const type = config.gsapEffect;
     const map = {
@@ -442,46 +461,59 @@ const applySingleEffect = (targetEl, baseClass) => {
       strobe: () => gsap.to(targetEl, { opacity: 0.3, repeat: -1, yoyo: true, duration: 0.15, ease: 'none' }),
       spring: () => gsap.to(targetEl, { scale: 1.15, repeat: -1, yoyo: true, duration: 0.5, ease: 'elastic.out(1,0.5)' }),
       heartbeat: () => gsap.to(targetEl, { scale: 1.15, repeat: -1, yoyo: true, duration: 0.15, ease: 'power2.out', repeatDelay: 0.5 }),
-      breatheHue: () => gsap.to(targetEl, { scale: 1.08, hueRotate: 60, repeat: -1, yoyo: true, duration: 1.5, ease: 'sine.inOut' })
+      breatheHue: () => gsap.to(targetEl, { scale: 1.08, hueRotate: 60, repeat: -1, yoyo: true, duration: 1.5, ease: 'sine.inOut' }),
+      elasticScale: () => gsap.to(targetEl, { scale: 1.2, repeat: -1, yoyo: true, duration: 0.8, ease: 'elastic.out(1,0.4)' }),
+      fadePulse: () => gsap.to(targetEl, { opacity: 0.5, scale: 1.05, repeat: -1, yoyo: true, duration: 1, ease: 'sine.inOut' }),
+      skewBreathe: () => gsap.to(targetEl, { skewX: 5, scale: 1.05, repeat: -1, yoyo: true, duration: 1.2, ease: 'sine.inOut' }),
+      randomMicro: () => gsap.to(targetEl, { x: 'random(-3,3)', y: 'random(-3,3)', repeat: -1, yoyo: true, duration: 0.3, ease: 'none' }),
+      staggerScale: () => gsap.to(targetEl, { scale: 1.1, repeat: -1, yoyo: true, duration: 0.7, ease: 'back.inOut(1.7)' }),
+      strobeBreathe: () => gsap.to(targetEl, { opacity: 0.4, scale: 1.06, repeat: -1, yoyo: true, duration: 0.8, ease: 'sine.inOut' }),
+      waveScale: () => gsap.to(targetEl, { scale: 1.1, repeat: -1, yoyo: true, duration: 1, ease: 'sine.inOut', delay: 0.1 }),
+      spiral: () => gsap.to(targetEl, { rotate: 360, scale: 1.05, repeat: -1, duration: 3, ease: 'none' }),
+      easeScale: () => gsap.to(targetEl, { scale: 1.08, repeat: -1, yoyo: true, duration: 1.8, ease: 'power4.inOut' }),
+      jitterBreathe: () => gsap.to(targetEl, { scale: 1.06, x: 1, repeat: -1, yoyo: true, duration: 0.8, ease: 'none' }),
+      gradualTilt: () => gsap.to(targetEl, { rotate: 10, repeat: -1, yoyo: true, duration: 2, ease: 'power1.inOut' }),
+      doublePulse: () => gsap.to(targetEl, { scale: 1.1, repeat: -1, yoyo: true, duration: 0.3, ease: 'power2.inOut', repeatDelay: 0.3 }),
+      reverseBreathe: () => gsap.to(targetEl, { scale: 0.92, repeat: -1, yoyo: true, duration: 1.2, ease: 'sine.inOut' }),
+      spinBreathe: () => gsap.to(targetEl, { rotate: 5, scale: 1.05, repeat: -1, yoyo: true, duration: 1.2, ease: 'sine.inOut' }),
+      crescendo: () => gsap.to(targetEl, { scale: 1.2, repeat: -1, yoyo: true, duration: 2, ease: 'power3.inOut' }),
+      floatSpin: () => gsap.to(targetEl, { y: -10, rotate: 8, repeat: -1, yoyo: true, duration: 1.8, ease: 'sine.inOut' })
     };
     if (map[type]) map[type]();
   }
 };
 
-const setFontEffect = (mode) => {
-  config.fontEffect = mode;
-  if (mode === 'particle') {
+watch(() => [config.gsapEffect], () => {
+  nextTick(() => {
     if (isPlaying.value) {
-      nextTick(() => startParticleText());
+      applyEffectsToElements(fullRibbonRef, '.stage-glyph');
+    } else {
+      applyEffectsToElements(prevRibbonRef, '.preview-glyph');
     }
-  } else {
-    stopParticleText();
-    nextTick(() => {
-      if (isPlaying.value) {
-        applyEffectsToElements(fullRibbonRef, '.stage-glyph');
-      } else {
-        applyEffectsToElements(prevRibbonRef, '.preview-glyph');
-      }
-    });
+  });
+});
+
+const stopCanvasEffects = () => {
+  if (particleAnimationId) {
+    cancelAnimationFrame(particleAnimationId);
+    particleAnimationId = null;
+  }
+  if (particleCanvasRef.value) {
+    const ctx = particleCanvasRef.value.getContext('2d');
+    ctx.clearRect(0, 0, particleCanvasRef.value.width, particleCanvasRef.value.height);
   }
 };
 
-const initParticleText = () => {
-  const canvas = particleCanvasRef.value;
-  if (!canvas) return;
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-};
-
-const startParticleText = () => {
-  stopParticleText();
-  initParticleText();
+const startPixelText = () => {
+  stopCanvasEffects();
+  if (!particleCanvasRef.value || !config.text) return;
   const canvas = particleCanvasRef.value;
   const ctx = canvas.getContext('2d');
-  const text = config.text;
-  if (!text) return;
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
   const fontSize = config.fontSize;
   const fontFamily = config.font === '系统默认' ? 'system-ui, sans-serif' : config.font;
+  const text = config.text;
   ctx.font = `900 ${fontSize}px ${fontFamily}`;
   const metrics = ctx.measureText(text);
   const textWidth = metrics.width;
@@ -496,15 +528,66 @@ const startParticleText = () => {
   const imageData = offCtx.getImageData(0, 0, textWidth, textHeight).data;
   const particles = [];
   const step = 4;
+  const startX = (canvas.width - textWidth) / 2;
+  const startY = (canvas.height - textHeight) / 2;
   for (let y = 0; y < textHeight; y += step) {
     for (let x = 0; x < textWidth; x += step) {
       const index = (y * textWidth + x) * 4;
       if (imageData[index + 3] > 128) {
         particles.push({
-          x: x + (canvas.width - textWidth) / 2,
-          y: y + (canvas.height - textHeight) / 2,
-          originX: x + (canvas.width - textWidth) / 2,
-          originY: y + (canvas.height - textHeight) / 2,
+          x: x + startX,
+          y: y + startY,
+          originX: x + startX,
+          originY: y + startY
+        });
+      }
+    }
+  }
+  const draw = () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = config.textColor;
+    for (const p of particles) {
+      ctx.fillRect(Math.round(p.x), Math.round(p.y), step, step);
+    }
+  };
+  draw();
+};
+
+const startParticleText = () => {
+  stopCanvasEffects();
+  if (!particleCanvasRef.value || !config.text) return;
+  const canvas = particleCanvasRef.value;
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const fontSize = config.fontSize;
+  const fontFamily = config.font === '系统默认' ? 'system-ui, sans-serif' : config.font;
+  const text = config.text;
+  ctx.font = `900 ${fontSize}px ${fontFamily}`;
+  const metrics = ctx.measureText(text);
+  const textWidth = metrics.width;
+  const textHeight = fontSize;
+  const offCanvas = document.createElement('canvas');
+  offCanvas.width = textWidth;
+  offCanvas.height = textHeight;
+  const offCtx = offCanvas.getContext('2d');
+  offCtx.font = `900 ${fontSize}px ${fontFamily}`;
+  offCtx.fillStyle = '#ffffff';
+  offCtx.fillText(text, 0, textHeight * 0.8);
+  const imageData = offCtx.getImageData(0, 0, textWidth, textHeight).data;
+  const particles = [];
+  const step = 4;
+  const startX = (canvas.width - textWidth) / 2;
+  const startY = (canvas.height - textHeight) / 2;
+  for (let y = 0; y < textHeight; y += step) {
+    for (let x = 0; x < textWidth; x += step) {
+      const index = (y * textWidth + x) * 4;
+      if (imageData[index + 3] > 128) {
+        particles.push({
+          x: x + startX,
+          y: y + startY,
+          originX: x + startX,
+          originY: y + startY,
           vx: 0,
           vy: 0
         });
@@ -520,10 +603,8 @@ const startParticleText = () => {
       p.y += p.vy;
       p.vx *= 0.98;
       p.vy *= 0.98;
-      const dx = p.originX - p.x;
-      const dy = p.originY - p.y;
-      p.x += dx * 0.05;
-      p.y += dy * 0.05;
+      p.x += (p.originX - p.x) * 0.05;
+      p.y += (p.originY - p.y) * 0.05;
       ctx.fillStyle = config.textColor;
       ctx.fillRect(p.x, p.y, 3, 3);
     }
@@ -532,15 +613,19 @@ const startParticleText = () => {
   animate();
 };
 
-const stopParticleText = () => {
-  if (particleAnimationId) {
-    cancelAnimationFrame(particleAnimationId);
-    particleAnimationId = null;
-  }
-  const canvas = particleCanvasRef.value;
-  if (canvas) {
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+const setFontEffect = (mode) => {
+  config.fontEffect = mode;
+  stopCanvasEffects();
+  if (mode === 'pixel') {
+    if (isPlaying.value) nextTick(() => startPixelText());
+  } else if (mode === 'particle') {
+    if (isPlaying.value) nextTick(() => startParticleText());
+  } else {
+    if (isPlaying.value) {
+      nextTick(() => applyEffectsToElements(fullRibbonRef, '.stage-glyph'));
+    } else {
+      nextTick(() => applyEffectsToElements(prevRibbonRef, '.preview-glyph'));
+    }
   }
 };
 
@@ -573,13 +658,14 @@ const startPlay = async () => {
   nextTick(() => {
     updateMarquee();
     applyEffectsToElements(fullRibbonRef, '.stage-glyph');
-    if (config.fontEffect === 'particle') startParticleText();
+    if (config.fontEffect === 'pixel') startPixelText();
+    else if (config.fontEffect === 'particle') startParticleText();
   });
 };
 
 const exitFullscreenLogic = () => {
   isPlaying.value = false;
-  stopParticleText();
+  stopCanvasEffects();
   if (document.exitFullscreen && document.fullscreenElement) {
     document.exitFullscreen().catch(() => {});
   }
@@ -633,7 +719,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  stopParticleText();
+  stopCanvasEffects();
   document.removeEventListener('fullscreenchange', handleFullscreenChange);
   window.removeEventListener('popstate', handlePopState);
   document.removeEventListener('visibilitychange', handleVisibilityChange);
@@ -655,7 +741,6 @@ onUnmounted(() => {
   --r-md: 14px;
   --r-sm: 10px;
 }
-
 .app-root {
   width: 100%;
   height: 100vh;
@@ -665,7 +750,6 @@ onUnmounted(() => {
   font-family: system-ui, -apple-system, sans-serif;
   position: relative;
 }
-
 .fullscreen-stage {
   position: fixed;
   inset: 0;
@@ -676,14 +760,12 @@ onUnmounted(() => {
   overflow: hidden;
   cursor: pointer;
 }
-
 .particle-canvas {
   position: absolute;
   inset: 0;
   z-index: 0;
   pointer-events: none;
 }
-
 .marquee-wrapper {
   width: 100%;
   overflow: hidden;
@@ -692,33 +774,26 @@ onUnmounted(() => {
   position: relative;
   z-index: 1;
 }
-
 .marquee-wrapper.is-static {
   justify-content: center;
 }
-
 .marquee-ribbon {
   display: inline-flex;
-  gap: 10vw;
+  gap: 0;
   will-change: transform;
   white-space: nowrap;
   align-items: center;
 }
-
 .stage-glyph {
   font-weight: 900;
   line-height: 1.2;
   user-select: none;
   -webkit-user-select: none;
-  padding: 0 5vw;
+  padding: 0 10vw;
 }
-
 .pixel-mode {
   text-shadow: none !important;
-  filter: url(#pixel-disrupt);
-  font-smooth: never;
 }
-
 .editor-layout {
   width: 100%;
   height: 100%;
@@ -726,7 +801,6 @@ onUnmounted(() => {
   flex-direction: column;
   background: linear-gradient(180deg, #0a0a0a 0%, #000 100%);
 }
-
 .preview-theater {
   height: 22vh;
   min-height: 140px;
@@ -737,7 +811,6 @@ onUnmounted(() => {
   border-bottom: 1px solid var(--card-border);
   flex-shrink: 0;
 }
-
 .phone-frame {
   width: 100%;
   max-width: 320px;
@@ -749,7 +822,6 @@ onUnmounted(() => {
   background: #000;
   position: relative;
 }
-
 .frame-screen {
   width: 100%;
   height: 100%;
@@ -758,38 +830,32 @@ onUnmounted(() => {
   justify-content: center;
   overflow: hidden;
 }
-
 .mini-marquee {
   width: 100%;
   overflow: hidden;
   white-space: nowrap;
 }
-
 .mini-marquee.is-static {
   display: flex;
   justify-content: center;
 }
-
 .mini-ribbon {
   display: inline-flex;
-  gap: 5vw;
+  gap: 0;
   will-change: transform;
   white-space: nowrap;
   align-items: center;
 }
-
 .preview-glyph {
   font-weight: 900;
   line-height: 1.2;
-  padding: 0 2.5vw;
+  padding: 0 5vw;
 }
-
 .config-area {
   flex: 1;
   overflow-y: auto;
   padding: 16px 16px 140px;
 }
-
 .glass-card {
   background: var(--card-bg);
   backdrop-filter: blur(30px);
@@ -803,38 +869,32 @@ onUnmounted(() => {
   gap: 14px;
   box-shadow: var(--card-shadow);
 }
-
 .row-card {
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
 }
-
 .label {
   font-size: 12px;
   color: var(--t2);
   font-weight: 600;
   letter-spacing: 0.05em;
 }
-
 .sub-label {
   font-size: 11px;
   color: var(--t2);
   margin-bottom: 6px;
   display: block;
 }
-
 .mt-4 { margin-top: 4px; }
 .mt-8 { margin-top: 8px; }
 .mt-12 { margin-top: 12px; }
 .mt-16 { margin-top: 16px; }
-
 .input-row {
   position: relative;
   display: flex;
   align-items: center;
 }
-
 .neo-input {
   width: 100%;
   padding: 14px 16px;
@@ -847,17 +907,14 @@ onUnmounted(() => {
   box-sizing: border-box;
   transition: all 0.2s;
 }
-
 .neo-input.sm {
   padding: 10px 14px;
   font-size: 14px;
 }
-
 .neo-input:focus {
   border-color: var(--primary);
   background: rgba(0, 0, 0, 0.5);
 }
-
 .clear-inline {
   position: absolute;
   right: 12px;
@@ -868,17 +925,14 @@ onUnmounted(() => {
   cursor: pointer;
   padding: 4px;
 }
-
 .pill-group {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
-
 .pill-group.mini {
   gap: 6px;
 }
-
 .pill {
   padding: 10px 16px;
   border-radius: 10px;
@@ -890,50 +944,41 @@ onUnmounted(() => {
   cursor: pointer;
   transition: all 0.2s;
 }
-
 .pill.sm {
   padding: 8px 12px;
   font-size: 12px;
 }
-
 .pill.active {
   background: #fff;
   color: #000;
   border-color: #fff;
   box-shadow: 0 2px 10px rgba(255, 255, 255, 0.2);
 }
-
 .dir-pills {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
 }
-
 .pill.dir {
   text-align: center;
 }
-
 .mirror-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
-
 .pill.mirror {
   text-align: center;
 }
-
 .color-swatch-grid {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   justify-content: flex-start;
 }
-
 .color-swatch-grid.small {
   gap: 6px;
 }
-
 .swatch-item {
   width: 42px;
   height: 42px;
@@ -949,22 +994,18 @@ onUnmounted(() => {
   font-weight: 900;
   position: relative;
 }
-
 .swatch-item.sm {
   width: 32px;
   height: 32px;
   font-size: 0;
 }
-
 .swatch-item.active {
   transform: scale(1.1);
   border-color: #fff !important;
 }
-
 .swatch-text {
   pointer-events: none;
 }
-
 .color-swatch-sm {
   display: inline-block;
   width: 36px;
@@ -976,7 +1017,6 @@ onUnmounted(() => {
   overflow: hidden;
   box-sizing: border-box;
 }
-
 .hidden-color-input {
   position: absolute;
   top: -10px;
@@ -986,13 +1026,11 @@ onUnmounted(() => {
   opacity: 0;
   cursor: pointer;
 }
-
 .font-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
 }
-
 .font-btn {
   padding: 12px;
   border-radius: 10px;
@@ -1002,25 +1040,21 @@ onUnmounted(() => {
   font-size: 12px;
   cursor: pointer;
 }
-
 .font-btn.active {
   background: #fff;
   color: #000;
   border-color: #fff;
 }
-
 .slider-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
-
 .val {
   font-size: 13px;
   color: var(--primary);
   font-weight: 700;
 }
-
 .ruler-slider {
   position: relative;
   height: 30px;
@@ -1028,7 +1062,6 @@ onUnmounted(() => {
   align-items: center;
   margin-top: 4px;
 }
-
 .ruler-slider input[type="range"] {
   position: absolute;
   width: 100%;
@@ -1040,7 +1073,6 @@ onUnmounted(() => {
   top: 0;
   left: 0;
 }
-
 .ticks {
   position: absolute;
   width: 100%;
@@ -1049,7 +1081,6 @@ onUnmounted(() => {
   border-radius: 2px;
   pointer-events: none;
 }
-
 .ruler-slider::before {
   content: '';
   position: absolute;
@@ -1063,41 +1094,35 @@ onUnmounted(() => {
   left: calc(var(--val, 50) * 1%);
   transform: translateX(-50%);
 }
-
 .fx-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 6px;
 }
-
 .fx-btn {
-  padding: 10px 6px;
+  padding: 8px 4px;
   border-radius: 10px;
   border: 1px solid var(--card-border);
   background: rgba(255, 255, 255, 0.03);
   color: var(--t2);
-  font-size: 11px;
+  font-size: 10px;
   cursor: pointer;
   text-align: center;
   line-height: 1.3;
   transition: all 0.2s;
 }
-
 .fx-btn.active {
   background: #fff;
   color: #000;
   border-color: #fff;
 }
-
 .fx-btn.glow-fx.active {
   background: linear-gradient(135deg, #fff, #e0e0e0);
   box-shadow: 0 2px 12px rgba(255, 255, 255, 0.3);
 }
-
 .history-card {
   background: rgba(40, 40, 48, 0.8);
 }
-
 .history-list {
   display: flex;
   flex-direction: column;
@@ -1105,7 +1130,6 @@ onUnmounted(() => {
   max-height: 200px;
   overflow-y: auto;
 }
-
 .history-item {
   padding: 12px 14px;
   border-radius: var(--r-md);
@@ -1117,18 +1141,15 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 4px;
 }
-
 .history-item:active {
   background: rgba(255, 255, 255, 0.1);
   border-color: #fff;
 }
-
 .h-name {
   font-size: 12px;
   color: var(--primary);
   font-weight: 600;
 }
-
 .h-preview {
   font-size: 13px;
   color: var(--t1);
@@ -1136,7 +1157,6 @@ onUnmounted(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
 .history-empty {
   padding: 20px;
   text-align: center;
@@ -1145,7 +1165,6 @@ onUnmounted(() => {
   border: 1px dashed var(--card-border);
   border-radius: var(--r-md);
 }
-
 .bottom-bar {
   position: fixed;
   bottom: 0;
@@ -1160,7 +1179,6 @@ onUnmounted(() => {
   z-index: 10000;
   pointer-events: auto;
 }
-
 .action-btn {
   flex: 1;
   padding: 16px;
@@ -1172,18 +1190,15 @@ onUnmounted(() => {
   transition: transform 0.1s;
   letter-spacing: 0.02em;
 }
-
 .action-btn:active {
   transform: scale(0.96);
 }
-
 .action-btn.secondary {
   background: rgba(255, 255, 255, 0.1);
   color: var(--t1);
   border: 1px solid var(--card-border);
   backdrop-filter: blur(10px);
 }
-
 .action-btn.primary {
   background: linear-gradient(135deg, #F0EEE9, #E8D6D0);
   color: #3A2825;
@@ -1195,32 +1210,26 @@ onUnmounted(() => {
   box-shadow: 0 3px 12px rgba(228, 208, 202, 0.3);
   transition: all 0.2s ease;
 }
-
 .action-btn.primary:active {
   transform: scale(0.96);
   opacity: 0.9;
 }
-
 .fade-stage-enter-active,
 .fade-stage-leave-active {
   transition: opacity 0.3s;
 }
-
 .fade-stage-enter-from,
 .fade-stage-leave-to {
   opacity: 0;
 }
-
 .slide-editor-enter-active,
 .slide-editor-leave-active {
   transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-
 .slide-editor-enter-from,
 .slide-editor-leave-to {
   transform: translateY(100%);
 }
-
 .spacer {
   height: 20px;
 }

@@ -724,7 +724,7 @@ const onTouchStart = () => {
 };
 const onTouchEnd = () => {
   clearTimeout(longPressTimer);
-  if (Date.now() - touchStartTime < 300) exitFullscreenLogic();
+  //if (Date.now() - touchStartTime < 300) exitFullscreenLogic();
 };
 const onTouchMove = () => clearTimeout(longPressTimer);
 
